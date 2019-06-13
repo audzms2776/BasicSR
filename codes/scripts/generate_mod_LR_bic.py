@@ -13,21 +13,14 @@ def generate_mod_LR_bic():
     mod_scale = 4
 
     # set data dir
-    sourcedir = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR_save'
-    savedir = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR_save_mod'
+    sourcedir = 'D:\\tmp\\BasicSR\\data_samples\\train_HR'
+    savedir = 'D:\\tmp\\BasicSR\\data_samples\\train_HR_mod'
 
-    saveLRpath = os.path.join(savedir, 'LR', 'x'+str(up_scale))
-    
     if not os.path.isdir(savedir):
         os.mkdir(savedir)
         
     if not os.path.isdir(os.path.join(savedir, 'LR')):
         os.mkdir(os.path.join(savedir, 'LR'))
-    
-    if not os.path.isdir(saveLRpath):
-        os.mkdir(saveLRpath)
-    else:
-        print('It will cover '+str(saveLRpath))
     
     filepaths = [f for f in os.listdir(sourcedir) if f.endswith('.png')]
     pbar = tqdm(total=len(filepaths))
@@ -45,7 +38,7 @@ def generate_mod_LR_bic():
             image_HR = image[0:mod_scale*height, 0:mod_scale*width]
         # LR
         image_LR = imresize_np(image_HR, 1/up_scale, True)
-        cv2.imwrite(os.path.join(saveLRpath, filename), image_LR)
+        cv2.imwrite(os.path.join(savedir, filename), image_LR)
 
         pbar.update(1)
     
