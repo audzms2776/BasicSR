@@ -26,8 +26,5 @@ tb_logger/*
 *.out
 *.synctex.gz
 
-# TODO
-data_samples/samples_byteimg
-data_samples/samples_colorimg
-data_samples/samples_segprob
-data_samples/samples_result
+
+data_samples/*
