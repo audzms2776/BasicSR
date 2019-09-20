@@ -1,4 +1,3 @@
-import os
 import logging
 from collections import OrderedDict
 
@@ -85,23 +84,27 @@ class SFTGAN_ACD_Model(BaseModel):
                     optim_params_SFT.append(v)
                 else:
                     optim_params_other.append(v)
-            self.optimizer_G_SFT = torch.optim.Adam(optim_params_SFT, lr=train_opt['lr_G']*5, \
-                weight_decay=wd_G, betas=(train_opt['beta1_G'], 0.999))
-            self.optimizer_G_other = torch.optim.Adam(optim_params_other, lr=train_opt['lr_G'], \
-                weight_decay=wd_G, betas=(train_opt['beta1_G'], 0.999))
+            self.optimizer_G_SFT = torch.optim.Adam(optim_params_SFT, lr=train_opt['lr_G'] * 5,
+                                                    weight_decay=wd_G,
+                                                    betas=(train_opt['beta1_G'], 0.999))
+            self.optimizer_G_other = torch.optim.Adam(optim_params_other, lr=train_opt['lr_G'],
+                                                      weight_decay=wd_G,
+                                                      betas=(train_opt['beta1_G'], 0.999))
             self.optimizers.append(self.optimizer_G_SFT)
             self.optimizers.append(self.optimizer_G_other)
             # D
             wd_D = train_opt['weight_decay_D'] if train_opt['weight_decay_D'] else 0
-            self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=train_opt['lr_D'], \
-                weight_decay=wd_D, betas=(train_opt['beta1_D'], 0.999))
+            self.optimizer_D = torch.optim.Adam(self.netD.parameters(), lr=train_opt['lr_D'],
+                                                weight_decay=wd_D,
+                                                betas=(train_opt['beta1_D'], 0.999))
             self.optimizers.append(self.optimizer_D)
 
             # schedulers
             if train_opt['lr_scheme'] == 'MultiStepLR':
                 for optimizer in self.optimizers:
-                    self.schedulers.append(lr_scheduler.MultiStepLR(optimizer, \
-                        train_opt['lr_steps'], train_opt['lr_gamma']))
+                    self.schedulers.append(
+                        lr_scheduler.MultiStepLR(optimizer, train_opt['lr_steps'],
+                                                 train_opt['lr_gamma']))
             else:
                 raise NotImplementedError('MultiStepLR learning rate scheme is enough.')
 
@@ -109,7 +112,7 @@ class SFTGAN_ACD_Model(BaseModel):
         # print network
         self.print_network()
 
-    def feed_data(self, data, need_HR=True):
+    def feed_data(self, data, need_GT=True):
         # LR
         self.var_L = data['LR'].to(self.device)
         # seg
@@ -117,8 +120,8 @@ class SFTGAN_ACD_Model(BaseModel):
         # category
         self.var_cat = data['category'].long().to(self.device)
 
-        if need_HR:  # train or val
-            self.var_H = data['HR'].to(self.device)
+        if need_GT:  # train or val
+            self.var_H = data['GT'].to(self.device)
 
     def optimize_parameters(self, step):
         # G
@@ -204,12 +207,12 @@ class SFTGAN_ACD_Model(BaseModel):
     def get_current_log(self):
         return self.log_dict
 
-    def get_current_visuals(self, need_HR=True):
+    def get_current_visuals(self, need_GT=True):
         out_dict = OrderedDict()
         out_dict['LR'] = self.var_L.detach()[0].float().cpu()
         out_dict['SR'] = self.fake_H.detach()[0].float().cpu()
-        if need_HR:
-            out_dict['HR'] = self.var_H.detach()[0].float().cpu()
+        if need_GT:
+            out_dict['GT'] = self.var_H.detach()[0].float().cpu()
         return out_dict
 
     def print_network(self):
@@ -228,7 +231,7 @@ class SFTGAN_ACD_Model(BaseModel):
             s, n = self.get_network_description(self.netD)
             if isinstance(self.netD, nn.DataParallel):
                 net_struc_str = '{} - {}'.format(self.netD.__class__.__name__,
-                                                self.netD.module.__class__.__name__)
+                                                 self.netD.module.__class__.__name__)
             else:
                 net_struc_str = '{}'.format(self.netD.__class__.__name__)
 
@@ -239,22 +242,23 @@ class SFTGAN_ACD_Model(BaseModel):
                 s, n = self.get_network_description(self.netF)
                 if isinstance(self.netF, nn.DataParallel):
                     net_struc_str = '{} - {}'.format(self.netF.__class__.__name__,
-                                                    self.netF.module.__class__.__name__)
+                                                     self.netF.module.__class__.__name__)
                 else:
                     net_struc_str = '{}'.format(self.netF.__class__.__name__)
 
-                logger.info('Network F structure: {}, with parameters: {:,d}'.format(net_struc_str, n))
+                logger.info('Network F structure: {}, with parameters: {:,d}'.format(
+                    net_struc_str, n))
                 logger.info(s)
 
     def load(self):
         load_path_G = self.opt['path']['pretrain_model_G']
         if load_path_G is not None:
             logger.info('Loading pretrained model for G [{:s}] ...'.format(load_path_G))
-            self.load_network(load_path_G, self.netG)
+            self.load_network(load_path_G, self.netG, self.opt['path']['strict_load'])
         load_path_D = self.opt['path']['pretrain_model_D']
         if self.opt['is_train'] and load_path_D is not None:
             logger.info('Loading pretrained model for D [{:s}] ...'.format(load_path_D))
-            self.load_network(load_path_D, self.netD)
+            self.load_network(load_path_D, self.netD, self.opt['path']['strict_load'])
 
     def save(self, iter_step):
         self.save_network(self.netG, 'G', iter_step)
