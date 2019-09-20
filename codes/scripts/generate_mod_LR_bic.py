@@ -14,9 +14,10 @@ def generate_mod_LR_bic():
     # set parameters
     up_scale = 4
     mod_scale = 4
+
     # set data dir
-    sourcedir = '/data/datasets/img'
-    savedir = '/data/datasets/mod'
+    sourcedir = 'D:\\tmp\\BasicSR\\data_samples\\div_train\\valid_HR'
+    savedir = 'D:\\tmp\\BasicSR\\data_samples\\div_train\\valid_LR'
 
     saveHRpath = os.path.join(savedir, 'HR', 'x' + str(mod_scale))
     saveLRpath = os.path.join(savedir, 'LR', 'x' + str(up_scale))

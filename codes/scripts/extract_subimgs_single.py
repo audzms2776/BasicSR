@@ -13,9 +13,9 @@ except ImportError:
 
 def main():
     """A multi-thread tool to crop sub imags."""
-    input_folder = '/mnt/SSD/xtwang/BasicSR_datasets/DIV2K800/DIV2K800'
-    save_folder = '/mnt/SSD/xtwang/BasicSR_datasets/DIV2K800/DIV2K800_sub'
-    n_thread = 20
+    input_folder = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR'
+    save_folder = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR_save'
+    n_thread = 10
     crop_sz = 480
     step = 240
     thres_sz = 48
@@ -26,10 +26,7 @@ def main():
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
         print('mkdir [{:s}] ...'.format(save_folder))
-    else:
-        print('Folder [{:s}] already exists. Exit...'.format(save_folder))
-        sys.exit(1)
-
+    
     img_list = []
     for root, _, file_list in sorted(os.walk(input_folder)):
         path = [os.path.join(root, x) for x in file_list]  # assume only images in the input_folder
@@ -42,6 +39,9 @@ def main():
 
     pool = Pool(n_thread)
     for path in img_list:
+        # result = worker(path, save_folder, crop_sz, step, thres_sz, compression_level)
+        # update(result)
+        
         pool.apply_async(worker,
                          args=(path, save_folder, crop_sz, step, thres_sz, compression_level),
                          callback=update)
@@ -66,6 +66,7 @@ def worker(path, save_folder, crop_sz, step, thres_sz, compression_level):
     if h - (h_space[-1] + crop_sz) > thres_sz:
         h_space = np.append(h_space, h - crop_sz)
     w_space = np.arange(0, w - crop_sz + 1, step)
+
     if w - (w_space[-1] + crop_sz) > thres_sz:
         w_space = np.append(w_space, w - crop_sz)
 
