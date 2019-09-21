@@ -1,23 +1,23 @@
 import os
 import os.path as osp
 import sys
-from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 import cv2
-try:
-    sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
-    from utils.util import ProgressBar
-except ImportError:
-    pass
+from tqdm import tqdm
+from glob import glob
 
+
+pbar = None
 
 def main():
+    global pbar
+    
     """A multi-thread tool to crop sub imags."""
-    input_folder = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR'
-    save_folder = 'D:\\tmp\\BasicSR\\data_samples\\DIV2K_valid_HR_save'
-    n_thread = 10
-    crop_sz = 480
-    step = 240
+    input_folder = 'D:\\tmp\\data\\DIV2K_valid_HR'
+    save_folder = 'D:\\tmp\\data\\valid_sample'
+    crop_sz = 96
+    step = crop_sz // 2
     thres_sz = 48
     compression_level = 3  # 3 is the default value in cv2
     # CV_IMWRITE_PNG_COMPRESSION from 0 to 9. A higher value means a smaller size and longer
@@ -27,31 +27,34 @@ def main():
         os.makedirs(save_folder)
         print('mkdir [{:s}] ...'.format(save_folder))
     
-    img_list = []
-    for root, _, file_list in sorted(os.walk(input_folder)):
-        path = [os.path.join(root, x) for x in file_list]  # assume only images in the input_folder
-        img_list.extend(path)
+    img_list = glob(input_folder + '/*')
 
-    def update(arg):
-        pbar.update(arg)
+    pbar = tqdm(total=len(img_list))
 
-    pbar = ProgressBar(len(img_list))
-
-    pool = Pool(n_thread)
-    for path in img_list:
-        # result = worker(path, save_folder, crop_sz, step, thres_sz, compression_level)
-        # update(result)
+    with ThreadPoolExecutor() as executor:
+        future_worker = {executor.submit(worker, path, save_folder, crop_sz, step, thres_sz, compression_level): path for path in img_list}
         
-        pool.apply_async(worker,
-                         args=(path, save_folder, crop_sz, step, thres_sz, compression_level),
-                         callback=update)
-    pool.close()
-    pool.join()
-    print('All subprocesses done.')
+        proccessing_sum = 0
+        
+        for future in as_completed(future_worker):
+            try:
+                data = future.result()
+                proccessing_sum += data
+            except Exception as exc:
+                print(exc)
+            else:
+                pbar.set_description('{}'.format(proccessing_sum))
+            
+    # for path in img_list:
+    #     print(path)
+    #     result = worker(path, save_folder, crop_sz, step, thres_sz, compression_level)
+    
+    # print('All subprocesses done.')
 
 
 def worker(path, save_folder, crop_sz, step, thres_sz, compression_level):
     img_name = os.path.basename(path)
+    names = img_name.split('.')
     img = cv2.imread(path, cv2.IMREAD_UNCHANGED)
 
     n_channels = len(img.shape)
@@ -79,13 +82,13 @@ def worker(path, save_folder, crop_sz, step, thres_sz, compression_level):
             else:
                 crop_img = img[x:x + crop_sz, y:y + crop_sz, :]
             crop_img = np.ascontiguousarray(crop_img)
-            # var = np.var(crop_img / 255)
-            # if var > 0.008:
-            #     print(img_name, index_str, var)
+            
             cv2.imwrite(
-                os.path.join(save_folder, img_name.replace('.png', '_s{:03d}.png'.format(index))),
+                os.path.join(save_folder, '{}{}.{}'.format(names[0], index, names[1])),
                 crop_img, [cv2.IMWRITE_PNG_COMPRESSION, compression_level])
-    return 'Processing {:s} ...'.format(img_name)
+            
+    pbar.update(1)
+    return index
 
 
 if __name__ == '__main__':
